@@ -1,41 +1,125 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <title>鳥類圖鑑</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    .card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-    img { max-width: 200px; }
-  </style>
+<meta charset="UTF-8">
+<title>鳥類圖鑑</title>
+
+<!-- ⭐【外觀設計區】你之後想改漂亮就改這裡 -->
+<style>
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #f5f7fa;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+/* 卡片排版 */
+#list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+/* ⭐ 卡片外框設計 */
+.card {
+  background: white;
+  border-radius: 15px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: scale(1.03);
+}
+
+/* 圖片 */
+img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+/* 分類標籤 */
+.tag {
+  display: inline-block;
+  background: #4CAF50;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-top: 5px;
+}
+</style>
 </head>
+
 <body>
 
-<h1>🐦 我的鳥類紀錄圖鑑</h1>
+<h1>🐦 我的鳥類圖鑑</h1>
 
+<!-- ⭐【輸入區】 -->
 <input id="name" placeholder="鳥名"><br><br>
-<input id="image" placeholder="圖片網址"><br><br>
-<input id="location" placeholder="地點"><br><br>
+
+<select id="category">
+  <option>猛禽</option>
+  <option>水鳥</option>
+  <option>鳴禽</option>
+  <option>其他</option>
+</select><br><br>
+
+<input type="file" id="imageFile"><br><br>
 <button onclick="addBird()">新增紀錄</button>
 
 <h2>圖鑑列表</h2>
 <div id="list"></div>
 
+<!-- ⭐ EXIF 讀取套件 -->
+<script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
 <script>
 let birds = JSON.parse(localStorage.getItem("birds")) || [];
 
+/* ⭐【新增資料】 */
 function addBird() {
-  const bird = {
-    name: document.getElementById("name").value,
-    image: document.getElementById("image").value,
-    location: document.getElementById("location").value
+  const file = document.getElementById("imageFile").files[0];
+  if (!file) {
+    alert("請選擇圖片");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const img = new Image();
+    img.src = e.target.result;
+
+    img.onload = function() {
+
+      /* ⭐【EXIF 讀取區】 */
+      EXIF.getData(img, function() {
+        const date = EXIF.getTag(this, "DateTimeOriginal") || "未知時間";
+
+        const bird = {
+          name: document.getElementById("name").value,
+          category: document.getElementById("category").value,
+          image: e.target.result,
+          date: date
+        };
+
+        birds.push(bird);
+        localStorage.setItem("birds", JSON.stringify(birds));
+        render();
+      });
+
+    };
   };
 
-  birds.push(bird);
-  localStorage.setItem("birds", JSON.stringify(birds));
-  render();
+  reader.readAsDataURL(file);
 }
 
+/* ⭐【畫面渲染】 */
 function render() {
   const list = document.getElementById("list");
   list.innerHTML = "";
@@ -43,9 +127,10 @@ function render() {
   birds.forEach(b => {
     list.innerHTML += `
       <div class="card">
-        <h3>${b.name}</h3>
         <img src="${b.image}">
-        <p>地點：${b.location}</p>
+        <h3>${b.name}</h3>
+        <div class="tag">${b.category}</div>
+        <p>📅 ${b.date}</p>
       </div>
     `;
   });
